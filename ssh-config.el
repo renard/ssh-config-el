@@ -5,7 +5,7 @@
 ;; Author: Sebastien Gross <seb•ɑƬ•chezwam•ɖɵʈ•org>
 ;; Keywords: emacs, ssh
 ;; Created: 2010-11-22
-;; Last changed: 2010-12-14 15:06:30
+;; Last changed: 2010-12-14 17:02:14
 ;; Licence: WTFPL, grab your copy here: http://sam.zoy.org/wtfpl/
 
 ;; This file is NOT part of GNU Emacs.
@@ -71,11 +71,13 @@ in `ssh_config(5)'."
   "Generate ssh configuration from `sc:ssh-file' org file."
   (interactive)
   (save-selected-window
-    (find-file sc:ssh-file)
-    (unless (org-mode-p)
-      (error "File %s is no in `org-mode'" sc:ssh-file))
     (let ((bconfig "*ssh config*")
-	  markers buffers)
+	  markers buffers kill-bufferp)
+      (unless (find-buffer-visiting sc:ssh-file)
+	(setq kill-bufferp t))
+      (find-file sc:ssh-file)
+      (unless (org-mode-p)
+	(error "File %s is no in `org-mode'" sc:ssh-file))
       ;; Scan the file for host definition
       (org-scan-tags
        '(add-to-list 'markers (set-marker (make-marker) (point)))
@@ -124,6 +126,7 @@ in `ssh_config(5)'."
 			      (replace-regexp-in-string 
 			       "_" "-" (match-string 1 (buffer-name)))))
 		     (kill-buffer (current-buffer))))))
-      (kill-buffer (find-buffer-visiting sc:ssh-file)))))
+      (when kill-bufferp
+	(kill-buffer (find-buffer-visiting sc:ssh-file))))))
 
 (provide 'ssh-config)
