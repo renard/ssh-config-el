@@ -5,7 +5,7 @@
 ;; Author: Sebastien Gross <seb•ɑƬ•chezwam•ɖɵʈ•org>
 ;; Keywords: emacs, ssh
 ;; Created: 2010-11-22
-;; Last changed: 2010-11-22 13:42:54
+;; Last changed: 2010-12-14 15:06:30
 ;; Licence: WTFPL, grab your copy here: http://sam.zoy.org/wtfpl/
 
 ;; This file is NOT part of GNU Emacs.
@@ -16,192 +16,114 @@
 
 ;;; Code:
 
+(require 'org)
 
 (defcustom sc:ssh-config-file "~/.ssh/config"
   "Path to user ssh configuration file."
-  :group 'ssh-config-hosts
+  :group 'ssh-config
   :type 'string)
 
-
-(defcustom sc:dsh-config-file "~/.dsh/group"
+(defcustom sc:dsh-config-file "~/.dsh/group/%s"
   "Path to user dsh group configuration files."
-  :group 'ssh-config-dsh-groups
+  :group 'ssh-config
   :type 'string)
 
-
-(defcustom sc:ssh-config-header
-  (concat
-   "Host *" "\n"
-   "\tForwardAgent yes" "\n"
-   "\tRhostsRSAAuthentication yes" "\n"
-   "\tRSAAuthentication yes" "\n"
-   "\tHashKnownHosts yes" "\n"
-   "\tIdentityFile ~/.ssh/id_rsa" "\n"
-   "\tTCPKeepAlive yes" "\n"
-   "\tServerAliveInterval 30" "\n"
-   "\tPort 22" "\n"
-   "\tProtocol 2,1" "\n")
-  "Header for user ssh configuration file."
-  :group 'ssh-config-hosts
-  :type 'string)
-
-
-(defcustom sc:ssh-default-user (user-login-name)
-  "Default username for ssh configuration."
-  :group 'ssh-config-hosts
-  :type 'string)
-
-(defcustom sc:ssh-proxy-command "ssh -q -t %s %s nc -w 1 %%h %%p"
-  "Default proxy command for ssh configuration. This string is passed to
-`format' with proxy and proxy-opts as arguments."
-  :group 'ssh-config-hosts
-  :type 'string)
-
-
-
-(defcustom sc:ssh-config-hosts nil
-  "List of all ssh hosts.
-
-A host is a PLIST with following properties:
-
-:name
-
-  Mandatory. The hostname to be used for the configuration. This is a uniq
-  internal hostname alias.
-
-:host
-
-  This is the host address to connect to. If `:name' could not be resolved,
-  `:host' property could help to connect to the remove server.
-
-  For example if the remote server is named \"my-server\" and has no DNS
-  entry, then `:host' could be defined as \"10.10.10.1\".
-
-:user
-
-  The username name to connect to the host. If not defined `sc:ssh-default-user'
-  would be used.
-
-
-:host-key-check
-
-  Use \"no\" to disable hot-key check on connect.
-
-:known-host-file
-
-  Specify a known-host file for the host.
-
-:proxy
-
-  Proxy command to connect to the host, generated against `sc:ssh-proxy-command'.
-
-:prox-opt
-
-  Options for `:proxy'.
-
-:group
-
-  List of group the host belongs to. This is used to create dsh groups.
-"
-  :group 'ssh-config-hosts
+(defcustom sc:ssh-config-keywords
+  '("Host" "AddressFamily" "BatchMode" "BindAddress"
+    "ChallengeResponseAuthentication" "CheckHostIP" "Cipher" "Ciphers"
+    "ClearAllForwardings" "Compression" "CompressionLevel" "ConnectionAttempts"
+    "ConnectTimeout" "ControlMaster" "ControlPath" "DynamicForward"
+    "EnableSSHKeysign" "EscapeChar" "ExitOnForwardFailure" "ForwardAgent"
+    "ForwardX11" "ForwardX11Trusted" "GatewayPorts" "GlobalKnownHostsFile"
+    "GSSAPIAuthentication" "GSSAPIKeyExchange" "GSSAPIClientIdentity"
+    "GSSAPIDelegateCredentials" "GSSAPIRenewalForcesRekey" "GSSAPITrustDns"
+    "HashKnownHosts" "HostbasedAuthentication" "HostKeyAlgorithms"
+    "HostKeyAlias" "HostName" "IdentitiesOnly" "IdentityFile"
+    "KbdInteractiveAuthentication" "KbdInteractiveDevices" "LocalCommand"
+    "LocalForward" "LogLevel" "MACs" "NoHostAuthenticationForLocalhost"
+    "NumberOfPasswordPrompts" "PasswordAuthentication" "PermitLocalCommand"
+    "PKCS11Provider" "Port " "PreferredAuthentications" "Protocol"
+    "ProxyCommand" "PubkeyAuthentication" "RekeyLimit" "RemoteForward"
+    "RhostsRSAAuthentication" "RSAAuthentication" "SendEnv"
+    "ServerAliveCountMax" "ServerAliveInterval" "StrictHostKeyChecking"
+    "TCPKeepAlive" "Tunnel" "TunnelDevice" "UseBlacklistedKeys"
+    "UsePrivilegedPort" "User" "UserKnownHostsFile" "VerifyHostKeyDNS"
+    "VisualHostKey" "XAuthLocation")
+  "List of keywords for ssh client configuration files as defined
+in `ssh_config(5)'."
+  :group 'ssh-config
   :type 'list)
 
+(defcustom sc:ssh-proxy-command 
+  "\tProxyCommand ssh -q -t %s nc -w 1 %%h %%p"
+  "Default proxy command for ssh configuration. This string is passed to
+`format' with proxy host as argument."
+  :group 'ssh-config
+  :type 'string)
 
+(defcustom sc:ssh-file "~/.ssh/hosts.org"
+  "Path to hosts configuration."
+  :group 'ssh-config
+  :type 'string)
 
-(defmacro sc:with-parse-host (&rest body)
-  "With a host definition plist defined in ITEM variable, as defined in
-`sc:ssh-config-hosts'."
-  `(let ((name (plist-get item :name))
-	 (host (plist-get item :host))
-	 (host-key-check (plist-get item :host-key-check))
-	 (known-host-file (plist-get item :known-host-file))
-	 (host (plist-get item :host))
-	 (user (plist-get item :user))
-	 (proxy (plist-get item :proxy))
-	 (proxy-opt (plist-get item :proxy-opt))
-	 (group (plist-get item :group)))
-
-     ;;(unless name
-     ;;  (error ":name not defined")
-     (when (symbolp name)
-       (setq name (symbol-name name)))
-     (when host
-       (when (symbolp host)
-	 (setq host (symbol-name host))))
-     (when host-key-check
-       (when (symbolp host-key-check)
-	 (setq host-key-check (symbol-name host-key-check))))
-     (when known-host-file
-       (when (symbolp known-host-file)
-	 (setq known-host-file (symbol-name known-host-file))))
-     (if user
-	 (when (symbolp user)
-	   (setq user (symbol-name user)))
-       (setq user sc:ssh-default-user))
-     (when proxy
-       (when (symbolp proxy)
-	 (setq proxy (symbol-name proxy))))
-     (if proxy-opt
-	 (when (symbolp proxy-opt)
-	   (setq proxy-opt (symbol-name proxy-opt)))
-       (setq proxy-opt ""))
-     ,@body))
-
-(defun sc:add-to-group (gl groups host)
-  "Add HOST to groups GROUPS in GL goup list."
-  (let (group-items)
-    (loop for (group) on groups by #'cdr
-	  do (progn
-	       (setq group-items (plist-get gl group))
-	       (if group-items
-		   (add-to-list 'group-items host)
-		 (setq group-items (list host)))
-	       (setq gl (plist-put gl group group-items))))
-    gl))
-
-
-
-(defun ssh-gen-config ()
-  "Generate ssh configuration from `sc:ssh-config-hosts'."
+
+(defun ssh-gen-config()
+  "Generate ssh configuration from `sc:ssh-file' org file."
   (interactive)
-  (let (groups-list)
-    (find-file sc:ssh-config-file)
-    (erase-buffer)
-    (insert (concat
-	     "# file generated on " 
-	     (format-time-string "%Y-%m-%d %T" (current-time))
-	     " by ssh-gen-config\n"
-	     "# DO NOT EDIT THIS FILE" "\n"))
-    (insert sc:ssh-config-header)
-    (loop for (item) on sc:ssh-config-hosts by #'cdr
-	  do (sc:with-parse-host
-	      (insert (format "\nHost %s\n" name))
-	      (when user (insert (format "\tUser %s\n" user)))
-	      (when host (insert (format "\tHostName %s\n" host)))
-	      (when known-host-file (insert (format "\tUserKnownHostsFile %s\n" known-host-file)))
-	      (when host-key-check (insert (format "\tStrictHostKeyChecking %s\n" host-key-check)))
-	      (when proxy
-		(insert "\tProxyCommand "
-			(format sc:ssh-proxy-command proxy proxy-opt) "\n"))
-	      (when group
-		(setq groups-list (sc:add-to-group groups-list group name)))
-	      ))
-    (save-buffer)
-    (kill-buffer)
-    
-    (loop for (gl items) on groups-list by #'cddr
-	  do (progn
-	       ;; (message (format  "gl: %s" gl))
-	       ;; (message (format  "items: %s" items))
-	       (find-file (format "%s/%s" sc:dsh-config-file gl))
-	       (erase-buffer)
-	       (insert (concat
-			"# file generated on "
-			(format-time-string "%Y-%m-%d %T" (current-time))
-			" by ssh-gen-config\n"
-			"# DO NOT EDIT THIS FILE" "\n"))
-	       (mapcar '(lambda (x) (insert x "\n")) items)
-	       (save-buffer)
-	       (kill-buffer)))))
+  (save-selected-window
+    (find-file sc:ssh-file)
+    (unless (org-mode-p)
+      (error "File %s is no in `org-mode'" sc:ssh-file))
+    (let ((bconfig "*ssh config*")
+	  markers buffers)
+      ;; Scan the file for host definition
+      (org-scan-tags
+       '(add-to-list 'markers (set-marker (make-marker) (point)))
+       '(not (member
+	      (cdr (assoc "TODO" (org-entry-properties (point) 'all)))
+	      '("SKIP" "DISABLED"))))
+      (get-buffer-create bconfig)
+      (loop for marker in (nreverse markers)
+	    do (org-with-point-at marker
+		 (looking-at org-complex-heading-regexp)
+		 (let* ((host	(org-match-string-no-properties 4))
+			(props  (org-entry-properties marker 'all))
+			(tags   (org-get-tags))
+			(parent (car (last (org-get-outline-path))))
+			(todo   (assoc "TODO" props)))
+		   (set-buffer bconfig)
+		   (insert (format "Host %s\n" host))
+		   ;; Insert all ssh keywords
+		   (loop for prop in props
+			 do (when (member (car prop) test:ssh-config-properties)
+			      (insert (format "\t%s %s\n"
+					      (car prop) (cdr prop)))))
+		   ;; If no TODO is found and host has a parent, use
+		   ;; parent as a proxy
+		   (when (and parent (not todo))
+		     (insert (format test:ssh-config-ssh-proxy-command parent)))
+		   (insert "\n")
+		   ;; retrieve all groups
+		   (loop for tag in tags
+			 do (progn
+			      (set-buffer
+			       (get-buffer-create (format "*dsh group %s*" tag)))
+			      (insert (format "%s\n" host))
+			      (add-to-list 'buffers (current-buffer)))))))
+      (set-buffer bconfig)
+      (write-file sc:ssh-config-file)
+      (kill-buffer (current-buffer))
+      (save-match-data
+	(loop for buffer in buffers
+	      do (progn
+		   (set-buffer buffer)
+		   (when (string-match "\\*dsh group \\(.*\\)\\*" (buffer-name))
+		     (write-file
+		      ;; change "_" in "-" for group name.
+		      (format sc:dsh-config-file
+			      (replace-regexp-in-string 
+			       "_" "-" (match-string 1 (buffer-name)))))
+		     (kill-buffer (current-buffer))))))
+      (kill-buffer (find-buffer-visiting sc:ssh-file)))))
 
 (provide 'ssh-config)
