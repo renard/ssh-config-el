@@ -5,7 +5,7 @@
 ;; Author: Sebastien Gross <seb•ɑƬ•chezwam•ɖɵʈ•org>
 ;; Keywords: emacs, ssh
 ;; Created: 2010-11-22
-;; Last changed: 2010-12-14 17:02:14
+;; Last changed: 2011-07-22 09:57:44
 ;; Licence: WTFPL, grab your copy here: http://sam.zoy.org/wtfpl/
 
 ;; This file is NOT part of GNU Emacs.
@@ -55,7 +55,7 @@ in `ssh_config(5)'."
   :type 'list)
 
 (defcustom sc:ssh-proxy-command 
-  "\tProxyCommand ssh -q -t %s nc -w 1 %%h %%p"
+  "\tProxyCommand ssh -q -t %s nc -w 60 %%h %%p"
   "Default proxy command for ssh configuration. This string is passed to
 `format' with proxy host as argument."
   :group 'ssh-config
@@ -67,6 +67,7 @@ in `ssh_config(5)'."
   :type 'string)
 
 
+;;;###autoload
 (defun ssh-gen-config()
   "Generate ssh configuration from `sc:ssh-file' org file."
   (interactive)
@@ -97,13 +98,13 @@ in `ssh_config(5)'."
 		   (insert (format "Host %s\n" host))
 		   ;; Insert all ssh keywords
 		   (loop for prop in props
-			 do (when (member (car prop) test:ssh-config-properties)
+			 do (when (member (car prop) sc:ssh-config-keywords)
 			      (insert (format "\t%s %s\n"
 					      (car prop) (cdr prop)))))
 		   ;; If no TODO is found and host has a parent, use
 		   ;; parent as a proxy
 		   (when (and parent (not todo))
-		     (insert (format test:ssh-config-ssh-proxy-command parent)))
+		     (insert (format sc:ssh-proxy-command parent)))
 		   (insert "\n")
 		   ;; retrieve all groups
 		   (loop for tag in tags
@@ -116,16 +117,16 @@ in `ssh_config(5)'."
       (write-file sc:ssh-config-file)
       (kill-buffer (current-buffer))
       (save-match-data
-	(loop for buffer in buffers
-	      do (progn
-		   (set-buffer buffer)
-		   (when (string-match "\\*dsh group \\(.*\\)\\*" (buffer-name))
-		     (write-file
-		      ;; change "_" in "-" for group name.
-		      (format sc:dsh-config-file
-			      (replace-regexp-in-string 
-			       "_" "-" (match-string 1 (buffer-name)))))
-		     (kill-buffer (current-buffer))))))
+      	(loop for buffer in buffers
+      	      do (progn
+      		   (set-buffer buffer)
+      		   (when (string-match "\\*dsh group \\(.*\\)\\*" (buffer-name))
+      		     (write-file
+      		      ;; change "_" in "-" for group name.
+      		      (format sc:dsh-config-file
+      			      (replace-regexp-in-string
+      			       "_" "-" (match-string 1 (buffer-name)))))
+      		     (kill-buffer (current-buffer))))))
       (when kill-bufferp
 	(kill-buffer (find-buffer-visiting sc:ssh-file))))))
 
