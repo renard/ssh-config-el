@@ -5,7 +5,7 @@
 ;; Author: Sebastien Gross <seb•ɑƬ•chezwam•ɖɵʈ•org>
 ;; Keywords: emacs, ssh
 ;; Created: 2010-11-22
-;; Last changed: 2011-07-22 09:57:44
+;; Last changed: 2011-09-14 17:37:16
 ;; Licence: WTFPL, grab your copy here: http://sam.zoy.org/wtfpl/
 
 ;; This file is NOT part of GNU Emacs.
@@ -16,6 +16,9 @@
 
 ;;; Code:
 
+(eval-when-compile
+  (require 'vc-hooks nil t)
+(require 'files nil t))
 (require 'org)
 
 (defcustom sc:ssh-config-file "~/.ssh/config"
@@ -72,7 +75,14 @@ in `ssh_config(5)'."
   "Generate ssh configuration from `sc:ssh-file' org file."
   (interactive)
   (save-selected-window
-    (let ((bconfig "*ssh config*")
+    (let (;; Disable slowing checks
+	  (backup-inhibited t)
+	  (auto-save-default nil)
+	  (find-file-hook nil)
+	  (after-save-hook nil)
+	  (before-save-hook nil)
+	  (vc-follow-symlinks t)
+	  (bconfig "*ssh config*")
 	  markers buffers kill-bufferp)
       (unless (find-buffer-visiting sc:ssh-file)
 	(setq kill-bufferp t))
