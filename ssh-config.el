@@ -5,7 +5,7 @@
 ;; Author: Sebastien Gross <seb•ɑƬ•chezwam•ɖɵʈ•org>
 ;; Keywords: emacs, ssh
 ;; Created: 2010-11-22
-;; Last changed: 2011-09-14 17:37:16
+;; Last changed: 2011-09-14 22:30:31
 ;; Licence: WTFPL, grab your copy here: http://sam.zoy.org/wtfpl/
 
 ;; This file is NOT part of GNU Emacs.
@@ -18,7 +18,7 @@
 
 (eval-when-compile
   (require 'vc-hooks nil t)
-(require 'files nil t))
+  (require 'files nil t))
 (require 'org)
 
 (defcustom sc:ssh-config-file "~/.ssh/config"
@@ -69,6 +69,16 @@ in `ssh_config(5)'."
   :group 'ssh-config
   :type 'string)
 
+(defcustom sc:extra-args `("-l" ,(concat (file-name-as-directory
+					  user-emacs-directory)
+					 "init.el")
+			   "--eval" "(require (quote ssh-config))")
+  "Extra arguments added to `command-line-args' during
+  `gen-ssh-config-async'.
+
+  For debugging purposes, you can add \"--eval\" \"\(setq
+  debug-on-error t\)\" and \"--debug-init\".")
+
 
 ;;;###autoload
 (defun ssh-gen-config()
@@ -80,6 +90,7 @@ in `ssh_config(5)'."
 	  (auto-save-default nil)
 	  (find-file-hook nil)
 	  (after-save-hook nil)
+	  (org-mode-hook nil)
 	  (before-save-hook nil)
 	  (vc-follow-symlinks t)
 	  (bconfig "*ssh config*")
@@ -139,5 +150,35 @@ in `ssh_config(5)'."
       		     (kill-buffer (current-buffer))))))
       (when kill-bufferp
 	(kill-buffer (find-buffer-visiting sc:ssh-file))))))
+
+
+(defun ssh-config-async-sentinel (proc change)
+  "Sentinel in charge of running next process if previous one succeeded."
+  (when (eq (process-status proc) 'exit)
+    (let ((status  (process-exit-status proc))
+	  (cmd (process-get proc :cmd))
+	  (cmd-buf (process-get proc :cmd-buf)))
+      (if (not (eq 0 status))
+	  (progn
+	    (when (process-buffer proc)
+	      (set-window-buffer (selected-window) cmd-buf))
+	    (error "SSH config ERROR: %s" cmd))
+	(message  "SSH config OK: %s" cmd))
+      (when cmd-buf (kill-buffer cmd-buf)))))
+
+;;;###autoload
+(defun ssh-gen-config-async ()
+  "Asynchronous files generation."
+  (interactive)
+  (let* ((cmd-line (append command-line-args
+			   `("--batch" ,@sc:extra-args
+			     "--eval" "(ssh-gen-config)")))
+	 (cmd-buf (get-buffer-create "SSH configuration async gen"))
+	 (proc (apply 'start-process (car cmd-line)
+		      cmd-buf (car cmd-line) (cdr cmd-line))))
+    (message (format "%S" cmd-line))
+    (process-put proc :cmd sc:ssh-file)
+    (process-put proc :cmd-buf cmd-buf)
+    (set-process-sentinel proc 'ssh-config-async-sentinel)))
 
 (provide 'ssh-config)
