@@ -5,7 +5,7 @@
 ;; Author: Sebastien Gross <seb•ɑƬ•chezwam•ɖɵʈ•org>
 ;; Keywords: emacs, ssh
 ;; Created: 2010-11-22
-;; Last changed: 2011-09-14 22:30:31
+;; Last changed: 2011-09-26 21:19:42
 ;; Licence: WTFPL, grab your copy here: http://sam.zoy.org/wtfpl/
 
 ;; This file is NOT part of GNU Emacs.
@@ -26,7 +26,7 @@
   :group 'ssh-config
   :type 'string)
 
-(defcustom sc:dsh-config-file "~/.dsh/group/%s"
+(defcustom sc:dsh-config-dir "~/.dsh/group"
   "Path to user dsh group configuration files."
   :group 'ssh-config
   :type 'string)
@@ -137,6 +137,8 @@ in `ssh_config(5)'."
       (set-buffer bconfig)
       (write-file sc:ssh-config-file)
       (kill-buffer (current-buffer))
+      (unless (file-exists-p sc:dsh-config-dir)
+	(mkdir sc:dsh-config-dir))
       (save-match-data
       	(loop for buffer in buffers
       	      do (progn
@@ -144,7 +146,7 @@ in `ssh_config(5)'."
       		   (when (string-match "\\*dsh group \\(.*\\)\\*" (buffer-name))
       		     (write-file
       		      ;; change "_" in "-" for group name.
-      		      (format sc:dsh-config-file
+      		      (concat (file-name-as-directory sc:dsh-config-dir)
       			      (replace-regexp-in-string
       			       "_" "-" (match-string 1 (buffer-name)))))
       		     (kill-buffer (current-buffer))))))
