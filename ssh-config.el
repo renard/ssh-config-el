@@ -5,7 +5,7 @@
 ;; Author: Sebastien Gross <seb•ɑƬ•chezwam•ɖɵʈ•org>
 ;; Keywords: emacs, ssh
 ;; Created: 2010-11-22
-;; Last changed: 2011-09-26 21:19:42
+;; Last changed: 2011-10-13 10:36:48
 ;; Licence: WTFPL, grab your copy here: http://sam.zoy.org/wtfpl/
 
 ;; This file is NOT part of GNU Emacs.
@@ -35,7 +35,7 @@
   '("Host" "AddressFamily" "BatchMode" "BindAddress"
     "ChallengeResponseAuthentication" "CheckHostIP" "Cipher" "Ciphers"
     "ClearAllForwardings" "Compression" "CompressionLevel" "ConnectionAttempts"
-    "ConnectTimeout" "ControlMaster" "ControlPath" "DynamicForward"
+    "ConnectTimeout" "ControlMaster" "ControlPath" "ControlPersist" "DynamicForward"
     "EnableSSHKeysign" "EscapeChar" "ExitOnForwardFailure" "ForwardAgent"
     "ForwardX11" "ForwardX11Trusted" "GatewayPorts" "GlobalKnownHostsFile"
     "GSSAPIAuthentication" "GSSAPIKeyExchange" "GSSAPIClientIdentity"
