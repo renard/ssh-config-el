@@ -5,7 +5,7 @@
 ;; Author: Sebastien Gross <seb•ɑƬ•chezwam•ɖɵʈ•org>
 ;; Keywords: emacs, ssh
 ;; Created: 2010-11-22
-;; Last changed: 2011-10-13 10:36:48
+;; Last changed: 2011-11-21 11:02:57
 ;; Licence: WTFPL, grab your copy here: http://sam.zoy.org/wtfpl/
 
 ;; This file is NOT part of GNU Emacs.
@@ -98,7 +98,7 @@ in `ssh_config(5)'."
       (unless (find-buffer-visiting sc:ssh-file)
 	(setq kill-bufferp t))
       (find-file sc:ssh-file)
-      (unless (org-mode-p)
+      (unless (eq 'org-mode major-mode)
 	(error "File %s is no in `org-mode'" sc:ssh-file))
       ;; Scan the file for host definition
       (org-scan-tags
