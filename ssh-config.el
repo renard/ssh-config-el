@@ -5,7 +5,7 @@
 ;; Author: Sebastien Gross <seb•ɑƬ•chezwam•ɖɵʈ•org>
 ;; Keywords: emacs, ssh
 ;; Created: 2010-11-22
-;; Last changed: 2011-12-01 14:24:30
+;; Last changed: 2011-12-01 14:29:23
 ;; Licence: WTFPL, grab your copy here: http://sam.zoy.org/wtfpl/
 
 ;; This file is NOT part of GNU Emacs.
@@ -42,16 +42,16 @@
     "ClearAllForwardings" "Compression" "CompressionLevel" "ConnectionAttempts"
     "ConnectTimeout" "ControlMaster" "ControlPath" "ControlPersist" "DynamicForward"
     "EnableSSHKeysign" "EscapeChar" "ExitOnForwardFailure" "ForwardAgent"
-    "ForwardX11" "ForwardX11Trusted" "GatewayPorts" "GlobalKnownHostsFile"
+    "ForwardX11" "ForwardX11Timeout" "ForwardX11Trusted" "GatewayPorts" "GlobalKnownHostsFile"
     "GSSAPIAuthentication" "GSSAPIKeyExchange" "GSSAPIClientIdentity"
     "GSSAPIDelegateCredentials" "GSSAPIRenewalForcesRekey" "GSSAPITrustDns"
     "HashKnownHosts" "HostbasedAuthentication" "HostKeyAlgorithms"
-    "HostKeyAlias" "HostName" "IdentitiesOnly" "IdentityFile"
-    "KbdInteractiveAuthentication" "KbdInteractiveDevices" "LocalCommand"
+    "HostKeyAlias" "HostName" "IdentitiesOnly" "IdentityFile" "IPQoS"
+    "KbdInteractiveAuthentication" "KbdInteractiveDevices" "KexAlgorithms" "LocalCommand"
     "LocalForward" "LogLevel" "MACs" "NoHostAuthenticationForLocalhost"
     "NumberOfPasswordPrompts" "PasswordAuthentication" "PermitLocalCommand"
     "PKCS11Provider" "Port " "PreferredAuthentications" "Protocol"
-    "ProxyCommand" "PubkeyAuthentication" "RekeyLimit" "RemoteForward"
+    "ProxyCommand" "PubkeyAuthentication" "RekeyLimit" "RemoteForward" "RequestTTY"
     "RhostsRSAAuthentication" "RSAAuthentication" "SendEnv"
     "ServerAliveCountMax" "ServerAliveInterval" "StrictHostKeyChecking"
     "TCPKeepAlive" "Tunnel" "TunnelDevice" "UseBlacklistedKeys"
