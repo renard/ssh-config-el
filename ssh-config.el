@@ -5,14 +5,19 @@
 ;; Author: Sebastien Gross <seb•ɑƬ•chezwam•ɖɵʈ•org>
 ;; Keywords: emacs, ssh
 ;; Created: 2010-11-22
-;; Last changed: 2011-11-21 11:02:57
+;; Last changed: 2011-12-01 14:24:30
 ;; Licence: WTFPL, grab your copy here: http://sam.zoy.org/wtfpl/
 
 ;; This file is NOT part of GNU Emacs.
 
 ;;; Commentary:
 ;; 
-;; 
+;; Add support for multipath SSH command:
+;;  - Org property: :Other-Path: jh1
+;;  - Result in ssh config:
+;;    ProxyCommand sh -c "ssh -q -t PROXY nc -w 60 %h %p || ssh -q -t jh1 nc -w 60 %h %p"
+;;
+;; If PROXY could not be joined, try to connect via jh1.
 
 ;;; Code:
 
@@ -58,7 +63,7 @@ in `ssh_config(5)'."
   :type 'list)
 
 (defcustom sc:ssh-proxy-command 
-  "\tProxyCommand ssh -q -t %s nc -w 60 %%h %%p"
+  "ssh -q -t %s nc -w 60 %%h %%p"
   "Default proxy command for ssh configuration. This string is passed to
 `format' with proxy host as argument."
   :group 'ssh-config
@@ -114,18 +119,31 @@ in `ssh_config(5)'."
 			(props  (org-entry-properties marker 'all))
 			(tags   (org-get-tags))
 			(parent (car (last (org-get-outline-path))))
-			(todo   (assoc "TODO" props)))
+			(todo   (assoc "TODO" props))
+			other-path)
 		   (set-buffer bconfig)
 		   (insert (format "Host %s\n" host))
 		   ;; Insert all ssh keywords
 		   (loop for prop in props
-			 do (when (member (car prop) sc:ssh-config-keywords)
+			 do (cond
+			     ((member (car prop) sc:ssh-config-keywords)
 			      (insert (format "\t%s %s\n"
-					      (car prop) (cdr prop)))))
+					      (car prop) (cdr prop))))
+			     ((string= (car prop) "Other-Path")
+			      (setq other-path (split-string (cdr prop))))))
 		   ;; If no TODO is found and host has a parent, use
 		   ;; parent as a proxy
 		   (when (and parent (not todo))
-		     (insert (format sc:ssh-proxy-command parent)))
+		     ;; Multipath:
+		     (if other-path
+			 (insert (format "\tProxyCommand sh -c \"%s\""
+					 (mapconcat
+					  'identity
+					  (loop for h in (cons parent other-path)
+						collect  (format sc:ssh-proxy-command h))
+					  " || ")))
+		       (insert (format "\tProxyCommand %s"
+				       (format sc:ssh-proxy-command parent)))))
 		   (insert "\n")
 		   ;; retrieve all groups
 		   (loop for tag in tags
