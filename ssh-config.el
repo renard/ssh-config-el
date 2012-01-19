@@ -5,7 +5,7 @@
 ;; Author: Sebastien Gross <seb•ɑƬ•chezwam•ɖɵʈ•org>
 ;; Keywords: emacs, ssh
 ;; Created: 2010-11-22
-;; Last changed: 2011-12-01 14:29:23
+;; Last changed: 2012-01-19 13:31:34
 ;; Licence: WTFPL, grab your copy here: http://sam.zoy.org/wtfpl/
 
 ;; This file is NOT part of GNU Emacs.
@@ -50,7 +50,7 @@
     "KbdInteractiveAuthentication" "KbdInteractiveDevices" "KexAlgorithms" "LocalCommand"
     "LocalForward" "LogLevel" "MACs" "NoHostAuthenticationForLocalhost"
     "NumberOfPasswordPrompts" "PasswordAuthentication" "PermitLocalCommand"
-    "PKCS11Provider" "Port " "PreferredAuthentications" "Protocol"
+    "PKCS11Provider" "Port" "PreferredAuthentications" "Protocol"
     "ProxyCommand" "PubkeyAuthentication" "RekeyLimit" "RemoteForward" "RequestTTY"
     "RhostsRSAAuthentication" "RSAAuthentication" "SendEnv"
     "ServerAliveCountMax" "ServerAliveInterval" "StrictHostKeyChecking"
