@@ -5,7 +5,7 @@
 ;; Author: Sebastien Gross <seb•ɑƬ•chezwam•ɖɵʈ•org>
 ;; Keywords: emacs, ssh
 ;; Created: 2010-11-22
-;; Last changed: 2012-04-07 00:32:01
+;; Last changed: 2012-04-07 00:35:38
 ;; Licence: WTFPL, grab your copy here: http://sam.zoy.org/wtfpl/
 
 ;; This file is NOT part of GNU Emacs.
@@ -64,9 +64,12 @@ in `ssh_config(5)'."
   :type 'list)
 
 (defcustom sc:ssh-proxy-command 
-  '("ssh" "-o" "ConnectTimeout=5" "-q" "-t" jumphost "nc" "-w" "60" targethost "%p"))
+  '("ssh" "-o" "ConnectTimeout=5" "-q" "-t" jumphost "nc" "-w" "60" targethost "%p")
   "Default proxy command for ssh configuration. This string is passed to
-`format' with proxy host as argument."
+`ssh-gen-expand-command' with variables:
+
+  - jumphost: a proxy host
+  - targethost: the destination host."
   :group 'ssh-config
   :type 'string)
 
