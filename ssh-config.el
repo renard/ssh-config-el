@@ -171,6 +171,20 @@ if defined."
 					      (car proxy))))
 			   :todo todo))))))))
 
+;;;###autoload
+(defun ssh-gen-config()
+  "Generate ssh configuration from `sc:ssh-file' org file."
+  (interactive)
+  (let* ((hosts (ssh-gen-parse-hosts))
+	 (tags (loop for host in hosts
+		     with ret = (make-hash-table :test 'equal)
+		     do (loop for tag in (ssh-host-tags host)
+			      do (let ((h (gethash tag ret)))
+				   (add-to-list 'h (ssh-host-name host))
+				   (puthash tag h ret)))
+		     finally return ret)))
+    tags))
+
 
 ;;;###autoload
 (defun ssh-gen-config()
