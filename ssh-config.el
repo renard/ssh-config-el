@@ -5,7 +5,7 @@
 ;; Author: Sebastien Gross <seb•ɑƬ•chezwam•ɖɵʈ•org>
 ;; Keywords: emacs, ssh
 ;; Created: 2010-11-22
-;; Last changed: 2012-04-07 00:21:57
+;; Last changed: 2012-04-07 00:22:41
 ;; Licence: WTFPL, grab your copy here: http://sam.zoy.org/wtfpl/
 
 ;; This file is NOT part of GNU Emacs.
@@ -185,7 +185,22 @@ if defined."
 				   (add-to-list 'h (ssh-host-name host))
 				   (puthash tag h ret)))
 		     finally return ret)))
-    tags))
+
+    ;; ssh config
+    (with-temp-buffer
+      (loop for host in hosts
+	    do (progn
+		 (insert (format "Host %s\n" (ssh-host-name host)))
+
+		 (loop for o in (ssh-host-ssh-opts host)
+		       do (insert (format "\t%s\n" o)))
+
+		 (when (ssh-host-proxy host)
+		   (insert
+		    (format "\t%s\n" (ssh-host-proxy host))))
+
+		 (insert "\n")))
+      (write-file sc:ssh-config-file))))
 
 
 ;;;###autoload
