@@ -5,7 +5,7 @@
 ;; Author: Sebastien Gross <seb•ɑƬ•chezwam•ɖɵʈ•org>
 ;; Keywords: emacs, ssh
 ;; Created: 2010-11-22
-;; Last changed: 2012-04-07 00:22:41
+;; Last changed: 2012-04-07 00:28:46
 ;; Licence: WTFPL, grab your copy here: http://sam.zoy.org/wtfpl/
 
 ;; This file is NOT part of GNU Emacs.
@@ -200,7 +200,14 @@ if defined."
 		    (format "\t%s\n" (ssh-host-proxy host))))
 
 		 (insert "\n")))
-      (write-file sc:ssh-config-file))))
+      (write-file sc:ssh-config-file))
+
+    ;; DSH
+    (make-directory sc:dsh-config-dir t)
+    (loop for tag being the hash-key in tags
+	  do (with-temp-buffer
+	       (insert (mapconcat 'identity (gethash tag tags) "\n"))
+	       (write-file (format "%s/%s" sc:dsh-config-dir tag))))))
 
 
 ;;;###autoload
