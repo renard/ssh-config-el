@@ -5,7 +5,7 @@
 ;; Author: Sebastien Gross <seb•ɑƬ•chezwam•ɖɵʈ•org>
 ;; Keywords: emacs, ssh
 ;; Created: 2010-11-22
-;; Last changed: 2012-01-19 13:31:34
+;; Last changed: 2012-02-08 16:33:19
 ;; Licence: WTFPL, grab your copy here: http://sam.zoy.org/wtfpl/
 
 ;; This file is NOT part of GNU Emacs.
@@ -63,7 +63,7 @@ in `ssh_config(5)'."
   :type 'list)
 
 (defcustom sc:ssh-proxy-command 
-  "ssh -q -t %s nc -w 60 %%h %%p"
+  "ssh -o ConnectTimeout=5 -q -t %s nc -w 60 %s %%p"
   "Default proxy command for ssh configuration. This string is passed to
 `format' with proxy host as argument."
   :group 'ssh-config
@@ -133,17 +133,36 @@ in `ssh_config(5)'."
 			      (setq other-path (split-string (cdr prop))))))
 		   ;; If no TODO is found and host has a parent, use
 		   ;; parent as a proxy
-		   (when (and parent (not todo))
+		   (cond 
+		    ((and parent (not todo))
 		     ;; Multipath:
 		     (if other-path
 			 (insert (format "\tProxyCommand sh -c \"%s\""
 					 (mapconcat
 					  'identity
 					  (loop for h in (cons parent other-path)
-						collect  (format sc:ssh-proxy-command h))
+						collect
+						(let* ((split-h (split-string h ","))
+						       (proxy (car split-h))
+						       (host-target (or (cadr split-h) "%h")))
+						  
+						  (format sc:ssh-proxy-command proxy host-target)))
 					  " || ")))
 		       (insert (format "\tProxyCommand %s"
-				       (format sc:ssh-proxy-command parent)))))
+				       (format sc:ssh-proxy-command parent "%h")))))
+		    ((and other-path todo)
+		     (when other-path
+		       (insert (format "\tProxyCommand sh -c \"%s\""
+				       (mapconcat
+					'identity
+					(loop for h in other-path
+					      collect
+					      (let* ((split-h (split-string h ","))
+						     (proxy (car split-h))
+						     (host-target (or (cadr split-h) "%h")))
+						
+						  (format sc:ssh-proxy-command proxy host-target)))
+					" || "))))))
 		   (insert "\n")
 		   ;; retrieve all groups
 		   (loop for tag in tags
