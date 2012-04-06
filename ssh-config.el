@@ -5,7 +5,7 @@
 ;; Author: Sebastien Gross <seb•ɑƬ•chezwam•ɖɵʈ•org>
 ;; Keywords: emacs, ssh
 ;; Created: 2010-11-22
-;; Last changed: 2012-02-08 16:33:19
+;; Last changed: 2012-04-06 19:00:39
 ;; Licence: WTFPL, grab your copy here: http://sam.zoy.org/wtfpl/
 
 ;; This file is NOT part of GNU Emacs.
@@ -22,6 +22,7 @@
 ;;; Code:
 
 (eval-when-compile
+  (require 'cl nil t)
   (require 'vc-hooks nil t)
   (require 'files nil t))
 (require 'org)
@@ -83,6 +84,52 @@ in `ssh_config(5)'."
 
   For debugging purposes, you can add \"--eval\" \"\(setq
   debug-on-error t\)\" and \"--debug-init\".")
+
+
+(defstruct ssh-host
+  name
+  tags
+  parent
+  ssh-opts
+  other-path
+  todo)
+
+
+(defun ssh-gen-parse-hosts(&optional file)
+  "Parse ssh configuration from `sc:ssh-file' org file or from FILE
+if defined."
+  (let* ((file (or file sc:ssh-file)))
+
+    (with-current-buffer (or
+			  (get-file-buffer file)
+			  (find-file file))
+
+      (let ((markers (org-map-entries 'point-marker
+				      "/!-SKIP-DISABLED"
+				      'file)))
+
+	(loop for marker in markers
+	      collect (org-with-point-at marker
+			(let* ((props (org-entry-properties marker 'all))
+			       (todo (cdr (assoc "TODO" props)))
+			       ssh-opts other-path)
+
+			  (loop for prop in props
+				when (member (car prop) sc:ssh-config-keywords)
+				do (add-to-list 'ssh-opts (format "%s %s" (car prop) (cdr prop)))
+				when (string= (car prop) "Other-Path")
+				do (setf other-path (split-string (cdr prop))))
+
+			  (looking-at org-complex-heading-regexp)
+
+			  (make-ssh-host
+			   :name (org-match-string-no-properties 4)
+			   :tags (org-get-local-tags)
+			   :parent (unless (string= "DIRECT" todo)
+				     (car (last (org-get-outline-path))))
+			   :ssh-opts ssh-opts
+			   :other-path other-path
+			   :todo todo))))))))
 
 
 ;;;###autoload
