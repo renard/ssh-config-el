@@ -5,7 +5,7 @@
 ;; Author: Sebastien Gross <seb•ɑƬ•chezwam•ɖɵʈ•org>
 ;; Keywords: emacs, ssh
 ;; Created: 2010-11-22
-;; Last changed: 2012-04-06 19:00:39
+;; Last changed: 2012-04-07 00:03:34
 ;; Licence: WTFPL, grab your copy here: http://sam.zoy.org/wtfpl/
 
 ;; This file is NOT part of GNU Emacs.
@@ -64,7 +64,7 @@ in `ssh_config(5)'."
   :type 'list)
 
 (defcustom sc:ssh-proxy-command 
-  "ssh -o ConnectTimeout=5 -q -t %s nc -w 60 %s %%p"
+  '("ssh" "-o" "ConnectTimeout=5" "-q" "-t" jumphost "nc" "-w" "60" targethost "%p"))
   "Default proxy command for ssh configuration. This string is passed to
 `format' with proxy host as argument."
   :group 'ssh-config
@@ -89,10 +89,31 @@ in `ssh_config(5)'."
 (defstruct ssh-host
   name
   tags
-  parent
   ssh-opts
-  other-path
+  proxy
   todo)
+
+
+
+(defun ssh-gen-expand-command(command vars)
+  "Expand COMMAND list using VARS PLIST.
+
+For each element E of COMMAND:
+
+ - If E is a symbol and defined in VARS, its value is taken from
+   from VARS if not nil.
+ - If E is a LIST, it is `eval'.
+ - Else E is taken as it.
+"
+  (loop for c in command
+	if (symbolp c)
+	collect (or (plist-get vars c) c)
+	else
+	if (listp c)
+	collect (eval c)
+	else
+	collect c))
+
 
 
 (defun ssh-gen-parse-hosts(&optional file)
@@ -112,23 +133,42 @@ if defined."
 	      collect (org-with-point-at marker
 			(let* ((props (org-entry-properties marker 'all))
 			       (todo (cdr (assoc "TODO" props)))
-			       ssh-opts other-path)
+			       (parents (unless (string= "DIRECT" todo)
+					  (list (car (last (org-get-outline-path))))))
+			       ssh-opts proxy)
 
 			  (loop for prop in props
 				when (member (car prop) sc:ssh-config-keywords)
 				do (add-to-list 'ssh-opts (format "%s %s" (car prop) (cdr prop)))
 				when (string= (car prop) "Other-Path")
-				do (setf other-path (split-string (cdr prop))))
+				do (setf parents (append parents (split-string (cdr prop)))))
+
+
+			  (setq proxy
+				(loop for prxy in
+				      (loop for parent in parents
+					    collect
+					    (let ((path (split-string parent ",")))
+					      (ssh-gen-expand-command
+					       sc:ssh-proxy-command
+					       `(jumphost ,(car path)
+							  targethost ,(or (cadr path) "%h")))))
+				      collect (mapconcat 'identity prxy " ")))
+
 
 			  (looking-at org-complex-heading-regexp)
 
 			  (make-ssh-host
 			   :name (org-match-string-no-properties 4)
 			   :tags (org-get-local-tags)
-			   :parent (unless (string= "DIRECT" todo)
-				     (car (last (org-get-outline-path))))
 			   :ssh-opts ssh-opts
-			   :other-path other-path
+			   :proxy (when proxy
+				    (concat "ProxyCommand "
+					    (if (> (length proxy) 1)
+						(concat "sh -c \""
+							(mapconcat 'identity proxy " || ")
+							"\"")
+					      (car proxy))))
 			   :todo todo))))))))
 
 
