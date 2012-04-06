@@ -5,7 +5,7 @@
 ;; Author: Sebastien Gross <seb•ɑƬ•chezwam•ɖɵʈ•org>
 ;; Keywords: emacs, ssh
 ;; Created: 2010-11-22
-;; Last changed: 2012-04-07 00:03:34
+;; Last changed: 2012-04-07 00:21:57
 ;; Licence: WTFPL, grab your copy here: http://sam.zoy.org/wtfpl/
 
 ;; This file is NOT part of GNU Emacs.
@@ -160,7 +160,9 @@ if defined."
 
 			  (make-ssh-host
 			   :name (org-match-string-no-properties 4)
-			   :tags (org-get-local-tags)
+			   :tags (loop for tag in (org-get-local-tags)
+				       collect (replace-regexp-in-string
+						"_" "-" tag))
 			   :ssh-opts ssh-opts
 			   :proxy (when proxy
 				    (concat "ProxyCommand "
