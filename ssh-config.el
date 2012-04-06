@@ -5,7 +5,7 @@
 ;; Author: Sebastien Gross <seb•ɑƬ•chezwam•ɖɵʈ•org>
 ;; Keywords: emacs, ssh
 ;; Created: 2010-11-22
-;; Last changed: 2012-04-07 00:28:46
+;; Last changed: 2012-04-07 00:32:01
 ;; Licence: WTFPL, grab your copy here: http://sam.zoy.org/wtfpl/
 
 ;; This file is NOT part of GNU Emacs.
@@ -208,112 +208,6 @@ if defined."
 	  do (with-temp-buffer
 	       (insert (mapconcat 'identity (gethash tag tags) "\n"))
 	       (write-file (format "%s/%s" sc:dsh-config-dir tag))))))
-
-
-;;;###autoload
-(defun ssh-gen-config()
-  "Generate ssh configuration from `sc:ssh-file' org file."
-  (interactive)
-  (save-selected-window
-    (let (;; Disable slowing checks
-	  (backup-inhibited t)
-	  (auto-save-default nil)
-	  (find-file-hook nil)
-	  (after-save-hook nil)
-	  (org-mode-hook nil)
-	  (before-save-hook nil)
-	  (vc-follow-symlinks t)
-	  (bconfig "*ssh config*")
-	  markers buffers kill-bufferp)
-      (unless (find-buffer-visiting sc:ssh-file)
-	(setq kill-bufferp t))
-      (find-file sc:ssh-file)
-      (unless (eq 'org-mode major-mode)
-	(error "File %s is no in `org-mode'" sc:ssh-file))
-      ;; Scan the file for host definition
-      (org-scan-tags
-       '(add-to-list 'markers (set-marker (make-marker) (point)))
-       '(not (member
-	      (cdr (assoc "TODO" (org-entry-properties (point) 'all)))
-	      '("SKIP" "DISABLED"))))
-      (get-buffer-create bconfig)
-      (loop for marker in (nreverse markers)
-	    do (org-with-point-at marker
-		 (looking-at org-complex-heading-regexp)
-		 (let* ((host	(org-match-string-no-properties 4))
-			(props  (org-entry-properties marker 'all))
-			(tags   (org-get-tags))
-			(parent (car (last (org-get-outline-path))))
-			(todo   (assoc "TODO" props))
-			other-path)
-		   (set-buffer bconfig)
-		   (insert (format "Host %s\n" host))
-		   ;; Insert all ssh keywords
-		   (loop for prop in props
-			 do (cond
-			     ((member (car prop) sc:ssh-config-keywords)
-			      (insert (format "\t%s %s\n"
-					      (car prop) (cdr prop))))
-			     ((string= (car prop) "Other-Path")
-			      (setq other-path (split-string (cdr prop))))))
-		   ;; If no TODO is found and host has a parent, use
-		   ;; parent as a proxy
-		   (cond 
-		    ((and parent (not todo))
-		     ;; Multipath:
-		     (if other-path
-			 (insert (format "\tProxyCommand sh -c \"%s\""
-					 (mapconcat
-					  'identity
-					  (loop for h in (cons parent other-path)
-						collect
-						(let* ((split-h (split-string h ","))
-						       (proxy (car split-h))
-						       (host-target (or (cadr split-h) "%h")))
-						  
-						  (format sc:ssh-proxy-command proxy host-target)))
-					  " || ")))
-		       (insert (format "\tProxyCommand %s"
-				       (format sc:ssh-proxy-command parent "%h")))))
-		    ((and other-path todo)
-		     (when other-path
-		       (insert (format "\tProxyCommand sh -c \"%s\""
-				       (mapconcat
-					'identity
-					(loop for h in other-path
-					      collect
-					      (let* ((split-h (split-string h ","))
-						     (proxy (car split-h))
-						     (host-target (or (cadr split-h) "%h")))
-						
-						  (format sc:ssh-proxy-command proxy host-target)))
-					" || "))))))
-		   (insert "\n")
-		   ;; retrieve all groups
-		   (loop for tag in tags
-			 do (progn
-			      (set-buffer
-			       (get-buffer-create (format "*dsh group %s*" tag)))
-			      (insert (format "%s\n" host))
-			      (add-to-list 'buffers (current-buffer)))))))
-      (set-buffer bconfig)
-      (write-file sc:ssh-config-file)
-      (kill-buffer (current-buffer))
-      (unless (file-exists-p sc:dsh-config-dir)
-	(mkdir sc:dsh-config-dir))
-      (save-match-data
-      	(loop for buffer in buffers
-      	      do (progn
-      		   (set-buffer buffer)
-      		   (when (string-match "\\*dsh group \\(.*\\)\\*" (buffer-name))
-      		     (write-file
-      		      ;; change "_" in "-" for group name.
-      		      (concat (file-name-as-directory sc:dsh-config-dir)
-      			      (replace-regexp-in-string
-      			       "_" "-" (match-string 1 (buffer-name)))))
-      		     (kill-buffer (current-buffer))))))
-      (when kill-bufferp
-	(kill-buffer (find-buffer-visiting sc:ssh-file))))))
 
 
 (defun ssh-config-async-sentinel (proc change)
