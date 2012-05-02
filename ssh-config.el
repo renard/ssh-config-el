@@ -5,7 +5,7 @@
 ;; Author: Sebastien Gross <seb•ɑƬ•chezwam•ɖɵʈ•org>
 ;; Keywords: emacs, ssh
 ;; Created: 2010-11-22
-;; Last changed: 2012-04-07 00:35:38
+;; Last changed: 2012-05-02 11:02:03
 ;; Licence: WTFPL, grab your copy here: http://sam.zoy.org/wtfpl/
 
 ;; This file is NOT part of GNU Emacs.
@@ -129,7 +129,7 @@ if defined."
 			  (find-file file))
 
       (let ((markers (org-map-entries 'point-marker
-				      "/!-SKIP-DISABLED"
+				      "/-SKIP-DISABLED"
 				      'file)))
 
 	(loop for marker in markers
